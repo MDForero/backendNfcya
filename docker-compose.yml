@@ -1,0 +1,20 @@
+# Alternativa al PostgreSQL instalado en el equipo. Expone el 5433 para no chocar con un servicio local.
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: nfcya
+      POSTGRES_PASSWORD: nfcya
+      POSTGRES_DB: nfcya
+    ports:
+      - '5433:5432'
+    volumes:
+      - nfcya-pg:/var/lib/postgresql
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nfcya']
+      interval: 5s
+      retries: 10
+
+volumes:
+  nfcya-pg:
