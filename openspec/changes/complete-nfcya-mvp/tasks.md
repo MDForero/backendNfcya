@@ -2,9 +2,9 @@
 
 Marcar como completada solo con evidencia en código y pruebas. Numeración del paquete original; las tareas de frontend están en `frontend/openspec/changes/complete-nfcya-mvp/tasks.md`.
 
-## Estado al 2026-11-12
+## Estado al 2026-11-13
 - **Avance:** 51/54 tareas. Pendientes: 1.2 (Google OAuth real, faltan credenciales), 7.5 (HTTPS/CORS/cookies con dominio público, falta entorno), 7.10 (archivar al cerrar).
-- **Pruebas:** unitarias 101/101, e2e 174/174, smoke en navegador 45/45.
+- **Pruebas (2026-11-13):** unitarias 101/101, e2e 174/174, lint ✅, smoke en navegador 45/45, auth-smoke 28/28.
 - **Decisiones de alcance (2026-11-12):** 7.5 (despliegue) se coordinará con el equipo de desarrollo fuera de la práctica; membresías y Wompi (8.1, 8.2) no se desarrollan por tiempo. El MVP se considera funcional.
 - **Migraciones:** `InitIdentity`, `ProfilesMvp`, `AdminUserLifecycle` (aplicadas en desarrollo).
 - **Últimos cambios:** revisión de integridad de la BD (11-11), alta de administradores por invitación y eliminación de usuarios (6.7, 11-12).
