@@ -159,7 +159,7 @@ describe('Perfiles digitales, enlaces, NFC/QR, vCard y leads (e2e)', () => {
       ).toBe('luis');
     });
 
-    it.each([
+    it.each<[Record<string, unknown>, string]>([
       [{ slug: 'admin' }, 'slug reservado'],
       [{ slug: 'ab' }, 'slug corto'],
       [{ displayName: '' }, 'nombre vacío'],
@@ -701,7 +701,7 @@ describe('Perfiles digitales, enlaces, NFC/QR, vCard y leads (e2e)', () => {
       expect(await leads().count()).toBe(0);
     });
 
-    it.each([
+    it.each<[Record<string, unknown>, string]>([
       [{ ...validLead, consentAccepted: false }, 'sin consentimiento'],
       [{ ...validLead, consentAccepted: 'true' }, 'consentimiento no booleano'],
       [{ name: 'X', consentAccepted: true }, 'sin email ni teléfono'],
