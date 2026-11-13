@@ -2,7 +2,7 @@
 
 API de nfcYA (NestJS 11 + PostgreSQL + TypeORM). Cubre identidad y control de acceso (registro, login con email/contraseña y Google, refresh token rotativo, recuperación de contraseña, roles) y el producto: perfil digital con slug público, enlaces, códigos NFC/QR, vCard, captura de leads con consentimiento y administración de perfiles.
 
-Los requisitos están en [`openspec/`](openspec/): cambios `add-auth-and-roles` (identidad) y `complete-nfcya-mvp` (perfiles, NFC/QR, leads, administración). Las decisiones de diseño provisionales están en `openspec/changes/complete-nfcya-mvp/design.md`.
+Los requisitos están en [`openspec/`](openspec/): especificaciones vigentes en `openspec/specs/` (identidad y acceso, perfiles, NFC/QR, leads, administración). Los cambios `add-auth-and-roles` y `complete-nfcya-mvp` están archivados en `openspec/changes/archive/`; las decisiones de diseño están en `openspec/changes/archive/2026-11-13-complete-nfcya-mvp/design.md`.
 
 ## Puesta en marcha
 
@@ -69,7 +69,7 @@ Requisitos: Node 22, pnpm y PostgreSQL 13 o superior.
 | `pnpm migration:run` / `migration:revert` / `migration:show` | Migraciones |
 | `pnpm migration:generate src/database/migrations/<Nombre>` | Genera una migración a partir de las entidades |
 | `pnpm seed:admin` | Crea el primer `SUPER_ADMIN` |
-| `pnpm seed:demo` | Datos de demostración (requiere `DEMO_PASSWORD`; idempotente; no corre en producción). Ver el guion en `frontend/openspec/changes/complete-nfcya-mvp/demo.md` |
+| `pnpm seed:demo` | Datos de demostración (requiere `DEMO_PASSWORD`; idempotente; no corre en producción). Ver el guion en `frontend/openspec/changes/archive/2026-11-13-complete-nfcya-mvp/demo.md` |
 
 Cada migración nueva se registra a mano en `src/database/migrations/index.ts`. `synchronize` está desactivado en todos los entornos.
 

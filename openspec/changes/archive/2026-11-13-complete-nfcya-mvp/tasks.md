@@ -1,11 +1,12 @@
 # Tasks: completar NFCYa — backend
 
-Marcar como completada solo con evidencia en código y pruebas. Numeración del paquete original; las tareas de frontend están en `frontend/openspec/changes/complete-nfcya-mvp/tasks.md`.
+Marcar como completada solo con evidencia en código y pruebas. Numeración del paquete original; las tareas de frontend están en `frontend/openspec/changes/archive/2026-11-13-complete-nfcya-mvp/tasks.md`.
 
-## Estado al 2026-11-13
-- **Avance:** 51/54 tareas. Pendientes: 1.2 (Google OAuth real, faltan credenciales), 7.5 (HTTPS/CORS/cookies con dominio público, falta entorno), 7.10 (archivar al cerrar).
+## Estado al 2026-11-13 (cierre)
+- **Avance:** 52/54 tareas. Archivado el 2026-11-13 al cerrar el MVP de la práctica, junto con `add-auth-and-roles` (37/38).
+- **Pendientes externos (no requieren desarrollo):** 1.2 y 8.3 de `add-auth-and-roles` (Google OAuth real: faltan credenciales de Google Cloud); 7.5 (despliegue con HTTPS y dominio público: coordinado con el equipo de desarrollo).
 - **Pruebas (2026-11-13):** unitarias 101/101, e2e 174/174, lint ✅, smoke en navegador 45/45, auth-smoke 28/28.
-- **Decisiones de alcance (2026-11-12):** 7.5 (despliegue) se coordinará con el equipo de desarrollo fuera de la práctica; membresías y Wompi (8.1, 8.2) no se desarrollan por tiempo. El MVP se considera funcional.
+- **Decisiones de alcance (2026-11-12):** 7.5 (despliegue) se coordina con el equipo de desarrollo fuera de la práctica; membresías y Wompi (8.1, 8.2) no se desarrollan por tiempo. El MVP se considera funcional.
 - **Migraciones:** `InitIdentity`, `ProfilesMvp`, `AdminUserLifecycle` (aplicadas en desarrollo).
 - **Últimos cambios:** revisión de integridad de la BD (11-11), alta de administradores por invitación y eliminación de usuarios (6.7, 11-12).
 - **Fuera de alcance / backlog:** ver `design.md` → «Backlog no entregado».
@@ -74,8 +75,8 @@ Marcar como completada solo con evidencia en código y pruebas. Numeración del 
 - [x] 7.2 Ejecutar build/compilación de producción. — `nest build` y `next build` OK.
 - [x] 7.3 Probar migraciones desde BD limpia. — global-setup e2e aplica migraciones sobre esquema vacío; revert/run verificado y sin drift.
 - [x] 7.4 Mantener `.env.example` sin secretos. — solo placeholders; añadidas variables `PUBLIC_*`/`LEADS_*`.
-- [ ] 7.5 Verificar HTTPS, CORS, cookies y URL pública en entorno acordado. — pendiente de entorno acordado (HTTPS, dominio, `trust proxy`).
+- [ ] 7.5 Verificar HTTPS, CORS, cookies y URL pública en entorno acordado. — **Coordinado con el equipo de desarrollo** (decisión del 2026-11-12): el despliegue a producción con HTTPS, dominio público, CORS, cookies `secure` y `trust proxy` no forma parte de la práctica; queda a cargo del equipo. La configuración ya está parametrizada por variables de entorno (ver README).
 - [x] 7.6 Revisar logs y datos sensibles. — nuevos módulos no registran datos; `MAIL_TRANSPORT=log` (escribe tokens) rechazado en producción.
 - [x] 7.7 Documentar instalación, ejecución, migraciones, pruebas y limitaciones. — `README.md` (perfiles, endpoints, pruebas, limitaciones).
 - [x] 7.8 Registrar backlog no entregado. — design.md «Backlog no entregado».
-- [ ] 7.10 Archivar cambios OpenSpec completados.
+- [x] 7.10 Archivar cambios OpenSpec completados. — 2026-11-13: archivado con pendientes externos documentados (ver «Estado»).
