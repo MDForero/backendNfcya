@@ -9,9 +9,12 @@ import {
   login,
   resetDb,
   TestContext,
+  tokenFromMail,
   userSession,
   waitForMail,
 } from './utils';
+import { OneTimeToken } from '../src/auth/entities/one-time-token.entity';
+import { Profile } from '../src/profiles/entities/profile.entity';
 
 const MISSING_ID = '00000000-0000-4000-8000-000000000000';
 
@@ -675,6 +678,196 @@ describe('Administración de usuarios y organizaciones (e2e)', () => {
         .get('/admin/users/no-es-uuid')
         .set(soporte.auth)
         .expect(400);
+    });
+  });
+
+  describe('alta de administradores', () => {
+    it('SUPER_ADMIN crea un SUPER_ADMIN: sin clave, invitado por correo, auditado; al definir la clave puede entrar', async () => {
+      const admin = await userSession(ctx, { role: Role.SUPER_ADMIN });
+      const res = await ctx
+        .http()
+        .post('/admin/users')
+        .set(admin.auth)
+        .send({
+          name: 'Nueva Admin',
+          email: ' Nueva@Example.com ',
+          role: 'SUPER_ADMIN',
+        })
+        .expect(201);
+      expect(res.body).toMatchObject({
+        email: 'nueva@example.com',
+        role: Role.SUPER_ADMIN,
+        status: UserStatus.ACTIVA,
+        emailVerified: false,
+        providers: [],
+      });
+
+      const [audit] = await audits().findBy({ targetUserId: res.body.id });
+      expect(audit).toMatchObject({
+        actorId: admin.user.id,
+        action: AuditAction.USER_CREATED,
+        after: { email: 'nueva@example.com', role: Role.SUPER_ADMIN },
+      });
+
+      // Sin contraseña no puede iniciar sesión todavía.
+      await ctx
+        .http()
+        .post('/auth/login')
+        .send({ email: 'nueva@example.com', password: 'Secreta123' })
+        .expect(401);
+
+      const mail = await waitForMail(ctx, 'nueva@example.com', 'Te invitaron');
+      expect(mail.text).toContain('Super Admin');
+      const token = await ctx.db
+        .getRepository(OneTimeToken)
+        .findOneByOrFail({ userId: res.body.id });
+      const ttlHours = (token.expiresAt.getTime() - Date.now()) / 3_600_000;
+      expect(ttlHours).toBeGreaterThan(71);
+
+      await ctx
+        .http()
+        .post('/auth/reset-password')
+        .send({ token: tokenFromMail(mail), password: 'OtraClave123' })
+        .expect(200);
+      const session = await login(ctx, 'nueva@example.com', 'OtraClave123');
+      const me = await ctx
+        .http()
+        .get('/users/me')
+        .set(session.auth)
+        .expect(200);
+      expect(me.body).toMatchObject({
+        role: Role.SUPER_ADMIN,
+        emailVerified: true,
+      });
+    });
+
+    it('también crea SOPORTE, pero no otros roles', async () => {
+      const admin = await userSession(ctx, { role: Role.SUPER_ADMIN });
+      await ctx
+        .http()
+        .post('/admin/users')
+        .set(admin.auth)
+        .send({
+          name: 'Soporte',
+          email: 'soporte@example.com',
+          role: 'SOPORTE',
+        })
+        .expect(201);
+      for (const role of ['CLIENTE', 'EMPRESA', 'OTRO']) {
+        await ctx
+          .http()
+          .post('/admin/users')
+          .set(admin.auth)
+          .send({ name: 'Equis', email: `x-${role}@example.com`, role })
+          .expect(400);
+      }
+    });
+
+    it('rechaza un email ya registrado con 409', async () => {
+      const admin = await userSession(ctx, { role: Role.SUPER_ADMIN });
+      await createUser(ctx, { email: 'existe@example.com' });
+      await ctx
+        .http()
+        .post('/admin/users')
+        .set(admin.auth)
+        .send({ name: 'Equis', email: 'EXISTE@example.com', role: 'SOPORTE' })
+        .expect(409);
+    });
+
+    it('SOPORTE, EMPRESA y CLIENTE no pueden crear administradores', async () => {
+      const org = await createOrganization(ctx);
+      for (const role of [Role.SOPORTE, Role.EMPRESA, Role.CLIENTE]) {
+        const s = await userSession(ctx, { role, organizationId: org.id });
+        await ctx
+          .http()
+          .post('/admin/users')
+          .set(s.auth)
+          .send({
+            name: 'Equis',
+            email: `y-${role}@example.com`,
+            role: 'SUPER_ADMIN',
+          })
+          .expect(403);
+      }
+      expect(await users().countBy({ role: Role.SUPER_ADMIN })).toBe(0);
+    });
+  });
+
+  describe('eliminación de usuarios', () => {
+    it('SUPER_ADMIN elimina un usuario: borra en cascada su perfil, corta su acceso y audita con sus datos', async () => {
+      const admin = await userSession(ctx, { role: Role.SUPER_ADMIN });
+      const victim = await userSession(ctx, { email: 'borrar@example.com' });
+      await ctx
+        .http()
+        .post('/profiles')
+        .set(victim.auth)
+        .send({ slug: 'borrar-me', displayName: 'Borrar' })
+        .expect(201);
+      expect(
+        await ctx.db
+          .getRepository(Profile)
+          .countBy({ ownerUserId: victim.user.id }),
+      ).toBe(1);
+
+      await ctx
+        .http()
+        .delete(`/admin/users/${victim.user.id}`)
+        .set(admin.auth)
+        .expect(204);
+
+      expect(await users().findOneBy({ id: victim.user.id })).toBeNull();
+      expect(
+        await ctx.db
+          .getRepository(Profile)
+          .countBy({ ownerUserId: victim.user.id }),
+      ).toBe(0);
+      await ctx.http().get('/users/me').set(victim.auth).expect(401);
+
+      const [audit] = await audits().findBy({
+        targetUserId: victim.user.id,
+        action: AuditAction.USER_DELETED,
+      });
+      expect(audit).toMatchObject({
+        actorId: admin.user.id,
+        before: { email: 'borrar@example.com', role: Role.CLIENTE },
+      });
+
+      await ctx
+        .http()
+        .delete(`/admin/users/${victim.user.id}`)
+        .set(admin.auth)
+        .expect(404);
+    });
+
+    it('nadie puede eliminarse a sí mismo ni dejar la plataforma sin SUPER_ADMIN activo', async () => {
+      const admin = await userSession(ctx, { role: Role.SUPER_ADMIN });
+      await ctx
+        .http()
+        .delete(`/admin/users/${admin.user.id}`)
+        .set(admin.auth)
+        .expect(400);
+
+      const other = await createUser(ctx, { role: Role.SUPER_ADMIN });
+      await ctx
+        .http()
+        .delete(`/admin/users/${other.id}`)
+        .set(admin.auth)
+        .expect(204);
+      expect(await users().countBy({ role: Role.SUPER_ADMIN })).toBe(1);
+    });
+
+    it('SOPORTE, EMPRESA y CLIENTE no pueden eliminar usuarios', async () => {
+      const org = await createOrganization(ctx);
+      const target = await createUser(ctx, { organizationId: org.id });
+      for (const role of [Role.SOPORTE, Role.EMPRESA, Role.CLIENTE]) {
+        const s = await userSession(ctx, { role, organizationId: org.id });
+        await ctx
+          .http()
+          .delete(`/admin/users/${target.id}`)
+          .set(s.auth)
+          .expect(403);
+      }
+      expect(await users().findOneBy({ id: target.id })).not.toBeNull();
     });
   });
 });

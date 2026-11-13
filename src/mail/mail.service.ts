@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EnvironmentVariables } from '../config/env.validation';
 import {
+  adminInvitationTemplate,
   MailContent,
   providerLinkedTemplate,
   registrationAttemptTemplate,
@@ -49,6 +50,17 @@ export class MailService {
       to,
       resetPasswordTemplate(
         to.name,
+        this.link('/auth/reset-password', { token }),
+      ),
+    );
+  }
+
+  sendAdminInvitation(to: Recipient, roleLabel: string, token: string) {
+    return this.deliver(
+      to,
+      adminInvitationTemplate(
+        to.name,
+        roleLabel,
         this.link('/auth/reset-password', { token }),
       ),
     );

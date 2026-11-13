@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -17,6 +18,7 @@ import { User } from '../users/user.entity';
 import {
   ChangeOrganizationDto,
   ChangeRoleDto,
+  CreateAdminUserDto,
   ListUsersQueryDto,
 } from './dto/admin-users.dto';
 import { UsersAdminService } from './users-admin.service';
@@ -35,6 +37,13 @@ export class UsersAdminController {
     return this.admin.list(actor, query);
   }
 
+  /** Crea un SUPER_ADMIN o SOPORTE sin contraseña y le envía la invitación por correo. */
+  @Post()
+  @Roles(ADMIN)
+  create(@CurrentUser() actor: User, @Body() dto: CreateAdminUserDto) {
+    return this.admin.createAdmin(actor, dto);
+  }
+
   @Get(':id')
   @Roles(ADMIN, SUPPORT, COMPANY)
   get(@CurrentUser() actor: User, @Param('id', ParseUUIDPipe) id: string) {
@@ -49,6 +58,17 @@ export class UsersAdminController {
     @Body() dto: ChangeRoleDto,
   ) {
     return this.admin.changeRole(actor, id, dto.role);
+  }
+
+  /** Borrado definitivo (con su perfil, enlaces, códigos y leads). Queda auditado. */
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles(ADMIN)
+  async remove(
+    @CurrentUser() actor: User,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    await this.admin.remove(actor, id);
   }
 
   @Patch(':id/organization')

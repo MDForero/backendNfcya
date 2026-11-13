@@ -40,4 +40,18 @@ describe('validateEnv', () => {
       'SMTP_HOST',
     );
   });
+
+  it('rechaza MAIL_TRANSPORT=log en producción', () => {
+    expect(() =>
+      validateEnv({ ...base, NODE_ENV: 'production', MAIL_TRANSPORT: 'log' }),
+    ).toThrow('MAIL_TRANSPORT=log');
+    expect(() =>
+      validateEnv({
+        ...base,
+        NODE_ENV: 'production',
+        MAIL_TRANSPORT: 'smtp',
+        SMTP_HOST: 'smtp.example.com',
+      }),
+    ).not.toThrow();
+  });
 });

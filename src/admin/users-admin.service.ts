@@ -16,12 +16,14 @@ import { Page } from '../common/pagination.dto';
 import { OrganizationsService } from '../organizations/organizations.service';
 import { canManageStatus, canView, listScope } from '../users/access-policy';
 import { Role, UserStatus } from '../users/role.enum';
-import { User } from '../users/user.entity';
+import { normalizeEmail, User } from '../users/user.entity';
 import { toUserView, UsersService, UserView } from '../users/users.service';
-import { ListUsersQueryDto } from './dto/admin-users.dto';
+import { CreateAdminUserDto, ListUsersQueryDto } from './dto/admin-users.dto';
 
 const notFound = () => new NotFoundException('Usuario no encontrado');
 
+/** Clave del advisory lock que serializa cambios que pueden dejar sin SUPER_ADMIN. */
+const SUPER_ADMIN_GUARD_LOCK = 7_310_001;
 @Injectable()
 export class UsersAdminService {
   constructor(
@@ -77,11 +79,88 @@ export class UsersAdminService {
     return (await this.users.getView(id))!;
   }
 
+  /**
+   * Alta de un SUPER_ADMIN o SOPORTE. La cuenta nace sin contraseña ni correo verificado:
+   * el invitado define su clave con el enlace del correo (eso también verifica el email).
+   */
+  async createAdmin(actor: User, dto: CreateAdminUserDto) {
+    const email = normalizeEmail(dto.email);
+    const created = await this.dataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(User);
+      if (await repo.exists({ where: { email } })) {
+        throw new ConflictException(
+          'Ya existe un usuario con ese email; cambia su rol desde el listado',
+        );
+      }
+      const user = await repo.save(
+        repo.create({
+          email,
+          name: dto.name,
+          passwordHash: null,
+          role: dto.role,
+          status: UserStatus.ACTIVA,
+          emailVerifiedAt: null,
+          organizationId: null,
+        }),
+      );
+      await this.audit.record(
+        {
+          actorId: actor.id,
+          targetUserId: user.id,
+          action: AuditAction.USER_CREATED,
+          after: { email, name: dto.name, role: dto.role },
+        },
+        manager,
+      );
+      return user;
+    });
+
+    await this.accountEmails.sendAdminInvitation(
+      created,
+      dto.role === Role.SUPER_ADMIN ? 'Super Admin' : 'Soporte',
+    );
+    return (await this.users.getView(created.id))!;
+  }
+
+  /**
+   * Borrado definitivo. La BD elimina en cascada perfil, enlaces, códigos NFC/QR, leads,
+   * tokens e identidades. La auditoría se conserva (sin FK) con los datos del borrado.
+   */
+  async remove(actor: User, id: string) {
+    if (actor.id === id)
+      throw new BadRequestException('No puedes eliminar tu propia cuenta');
+
+    await this.dataSource.transaction(async (manager) => {
+      await this.lockSuperAdminGuard(manager);
+      const target = await this.lockUser(manager, id);
+      if (target.role === Role.SUPER_ADMIN)
+        await this.assertNotLastSuperAdmin(manager, target);
+
+      await this.audit.record(
+        {
+          actorId: actor.id,
+          targetUserId: id,
+          action: AuditAction.USER_DELETED,
+          before: {
+            email: target.email,
+            name: target.name,
+            role: target.role,
+            status: target.status,
+            organizationId: target.organizationId,
+          },
+        },
+        manager,
+      );
+      await manager.delete(User, { id });
+    });
+  }
+
   async changeRole(actor: User, id: string, role: Role) {
     if (actor.id === id)
       throw new BadRequestException('No puedes cambiar tu propio rol');
 
     await this.dataSource.transaction(async (manager) => {
+      await this.lockSuperAdminGuard(manager);
       const target = await this.lockUser(manager, id);
       if (target.role === role) return;
       if (role === Role.EMPRESA && !target.organizationId) {
@@ -175,6 +254,7 @@ export class UsersAdminService {
 
     let changed = false;
     await this.dataSource.transaction(async (manager) => {
+      await this.lockSuperAdminGuard(manager);
       const target = await this.lockUser(manager, id);
       if (target.status === status) return;
       if (
@@ -222,6 +302,17 @@ export class UsersAdminService {
       .getOne();
     if (!user) throw notFound();
     return user;
+  }
+
+  /**
+   * Serializa los cambios de rol y de estado. Debe tomarse antes de lockUser:
+   * si no, dos degradaciones cruzadas bloquean cada una la fila de la otra y
+   * PostgreSQL aborta una por deadlock (500) en vez de responder 409.
+   */
+  private async lockSuperAdminGuard(manager: EntityManager) {
+    await manager.query('SELECT pg_advisory_xact_lock($1)', [
+      SUPER_ADMIN_GUARD_LOCK,
+    ]);
   }
 
   /** Bloquea a los SUPER_ADMIN activos para que dos operaciones simultáneas no dejen cero. */

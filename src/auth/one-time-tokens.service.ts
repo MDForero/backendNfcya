@@ -20,8 +20,15 @@ export class OneTimeTokensService {
     private readonly tokens: Repository<OneTimeToken>,
   ) {}
 
-  /** Crea un token nuevo e invalida los pendientes del mismo tipo para ese usuario. */
-  async create(userId: string, type: OneTimeTokenType) {
+  /**
+   * Crea un token nuevo e invalida los pendientes del mismo tipo para ese usuario.
+   * `ttlMs` permite una vigencia distinta (p. ej. invitaciones de administradores).
+   */
+  async create(
+    userId: string,
+    type: OneTimeTokenType,
+    ttlMs: number = TTL_MS[type],
+  ) {
     await this.tokens.update(
       { userId, type, usedAt: IsNull() },
       { usedAt: new Date() },
@@ -32,7 +39,7 @@ export class OneTimeTokensService {
         userId,
         type,
         tokenHash: hash,
-        expiresAt: new Date(Date.now() + TTL_MS[type]),
+        expiresAt: new Date(Date.now() + ttlMs),
         usedAt: null,
       }),
     );

@@ -7,8 +7,10 @@ import { AuthModule } from './auth/auth.module';
 import { validateEnv } from './config/env.validation';
 import { envFilePath } from './database/data-source';
 import { DatabaseModule } from './database/database.module';
+import { LeadsModule } from './leads/leads.module';
 import { MailModule } from './mail/mail.module';
 import { OrganizationsModule } from './organizations/organizations.module';
+import { ProfilesModule } from './profiles/profiles.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -25,6 +27,8 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     OrganizationsModule,
     AuthModule,
+    ProfilesModule,
+    LeadsModule,
     AdminModule,
   ],
 })

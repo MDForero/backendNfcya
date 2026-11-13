@@ -116,6 +116,48 @@ export class EnvironmentVariables {
   @IsInt()
   @Min(1)
   AUTH_THROTTLE_TTL_SECONDS = 60;
+
+  /**
+   * Límite por IP para renovar/cerrar sesión (/auth/refresh, /auth/logout, /auth/logout-all).
+   * Va aparte y más alto que AUTH_THROTTLE_LIMIT: cada carga de página renueva la sesión y
+   * varios usuarios pueden compartir IP pública (oficina). El refresh token es aleatorio,
+   * así que este límite solo frena abusos, no fuerza bruta. Ventana: AUTH_THROTTLE_TTL_SECONDS.
+   */
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  AUTH_SESSION_THROTTLE_LIMIT = 300;
+
+  /**
+   * Saltos de proxy de confianza (Express `trust proxy`). 0 = sin proxy. Con 1 detrás de un
+   * proxy/balanceador, el rate limit usa la IP real del visitante (X-Forwarded-For) y no la
+   * del proxy, que haría compartir el mismo contador a todos los usuarios.
+   */
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  TRUST_PROXY = 0;
+
+  /** Base de las URLs públicas de perfiles (/p/:slug) y NFC/QR (/r/:code). Vacía = FRONTEND_URL. */
+  @Transform(emptyToUndefined)
+  @IsOptional()
+  @IsUrl({ require_tld: false })
+  PUBLIC_BASE_URL?: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  PUBLIC_THROTTLE_LIMIT = 60;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  LEADS_THROTTLE_LIMIT = 5;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  PUBLIC_THROTTLE_TTL_SECONDS = 60;
 }
 
 /** Valida y tipa process.env al arrancar; lanza un error con todas las variables inválidas. */
@@ -136,6 +178,15 @@ export function validateEnv(config: Record<string, unknown>) {
   if (validated.MAIL_TRANSPORT === 'smtp' && !validated.SMTP_HOST) {
     throw new Error(
       'Configuración de entorno inválida: SMTP_HOST es obligatorio con MAIL_TRANSPORT=smtp',
+    );
+  }
+  // MAIL_TRANSPORT=log escribe los correos (con tokens de verificación y recuperación) en el log.
+  if (
+    validated.NODE_ENV === 'production' &&
+    validated.MAIL_TRANSPORT === 'log'
+  ) {
+    throw new Error(
+      'Configuración de entorno inválida: MAIL_TRANSPORT=log no se permite en producción (escribe tokens en el log)',
     );
   }
   if (validated.COOKIE_SAMESITE === 'none' && !validated.COOKIE_SECURE) {

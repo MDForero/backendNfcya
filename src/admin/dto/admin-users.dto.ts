@@ -1,8 +1,11 @@
 import {
+  IsEmail,
   IsEnum,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
+  Length,
   MaxLength,
   ValidateIf,
 } from 'class-validator';
@@ -43,4 +46,24 @@ export class ChangeOrganizationDto {
   @ValidateIf((dto: ChangeOrganizationDto) => dto.organizationId !== null)
   @IsUUID()
   organizationId: string | null;
+}
+
+/** Roles que un SUPER_ADMIN puede crear directamente (el resto se registra solo). */
+export const CREATABLE_ADMIN_ROLES = [Role.SUPER_ADMIN, Role.SOPORTE] as const;
+
+export class CreateAdminUserDto {
+  @Trim()
+  @IsString()
+  @Length(2, 120)
+  name: string;
+
+  @Trim()
+  @IsEmail({}, { message: 'Email inválido' })
+  @MaxLength(254)
+  email: string;
+
+  @IsIn(CREATABLE_ADMIN_ROLES, {
+    message: `role debe ser uno de: ${CREATABLE_ADMIN_ROLES.join(', ')}`,
+  })
+  role: (typeof CREATABLE_ADMIN_ROLES)[number];
 }

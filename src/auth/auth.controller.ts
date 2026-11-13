@@ -24,6 +24,7 @@ import {
   ResetPasswordDto,
   TokenDto,
 } from './dto/auth.dto';
+import { SessionThrottle } from './decorators/session-throttle.decorator';
 import { RefreshCookieService } from './refresh-cookie.service';
 import { IssuedSession, SessionsService } from './sessions.service';
 
@@ -71,6 +72,7 @@ export class AuthController {
   }
 
   @Public()
+  @SessionThrottle()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(
@@ -89,6 +91,7 @@ export class AuthController {
     }
   }
 
+  @SessionThrottle()
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
@@ -96,6 +99,7 @@ export class AuthController {
     this.cookie.clear(res);
   }
 
+  @SessionThrottle()
   @Post('logout-all')
   @HttpCode(HttpStatus.NO_CONTENT)
   async logoutAll(

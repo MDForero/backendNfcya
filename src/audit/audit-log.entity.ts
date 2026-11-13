@@ -11,8 +11,16 @@ export enum AuditAction {
   ORGANIZATION_CHANGED = 'ORGANIZATION_CHANGED',
   USER_SUSPENDED = 'USER_SUSPENDED',
   USER_REACTIVATED = 'USER_REACTIVATED',
+  PROFILE_SUSPENDED = 'PROFILE_SUSPENDED',
+  PROFILE_REACTIVATED = 'PROFILE_REACTIVATED',
+  USER_CREATED = 'USER_CREATED',
+  USER_DELETED = 'USER_DELETED',
 }
 
+/**
+ * Sin FK a `users` a propósito: el historial de auditoría debe sobrevivir al borrado
+ * del actor o del afectado (un CASCADE lo borraría y un SET NULL perdería quién fue).
+ */
 @Entity('audit_logs')
 export class AuditLog {
   @PrimaryGeneratedColumn('uuid')

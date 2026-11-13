@@ -4,7 +4,11 @@ import { AuditLog } from '../audit/audit-log.entity';
 import { LoginAttempt } from '../auth/entities/login-attempt.entity';
 import { OneTimeToken } from '../auth/entities/one-time-token.entity';
 import { RefreshToken } from '../auth/entities/refresh-token.entity';
+import { Lead } from '../leads/lead.entity';
 import { Organization } from '../organizations/organization.entity';
+import { ProfileIdentifier } from '../profiles/entities/profile-identifier.entity';
+import { ProfileLink } from '../profiles/entities/profile-link.entity';
+import { Profile } from '../profiles/entities/profile.entity';
 import { UserIdentity } from '../users/user-identity.entity';
 import { User } from '../users/user.entity';
 import { MIGRATIONS } from './migrations';
@@ -17,6 +21,10 @@ export const ENTITIES = [
   OneTimeToken,
   LoginAttempt,
   AuditLog,
+  Profile,
+  ProfileLink,
+  ProfileIdentifier,
+  Lead,
 ];
 
 /** Archivo de entorno según NODE_ENV: `.env.test` para los tests, `.env` para lo demás. */

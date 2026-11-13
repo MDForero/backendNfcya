@@ -8,6 +8,16 @@ export function setupApp(app: INestApplication) {
   const config =
     app.get<ConfigService<EnvironmentVariables, true>>(ConfigService);
 
+  const trustProxy = config.get('TRUST_PROXY', { infer: true });
+  if (trustProxy > 0) {
+    // Solo Express: req.ip pasa a ser la IP del cliente según X-Forwarded-For.
+    (
+      app.getHttpAdapter().getInstance() as {
+        set: (key: string, value: unknown) => void;
+      }
+    ).set('trust proxy', trustProxy);
+  }
+
   app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({

@@ -91,3 +91,22 @@ export function providerLinkedTemplate(
     ]),
   };
 }
+
+export function adminInvitationTemplate(
+  name: string,
+  roleLabel: string,
+  url: string,
+): MailContent {
+  return {
+    subject: 'Te invitaron a administrar nfcYA',
+    ...layout(
+      name,
+      [
+        `Un administrador de nfcYA creó tu cuenta con el rol ${roleLabel}.`,
+        'Para activarla, define tu contraseña con el siguiente enlace. Vence en 72 horas; si vence, pide al administrador que te envíe uno nuevo o usa "¿Olvidaste tu contraseña?".',
+        'Si no esperabas esta invitación, ignora este correo.',
+      ],
+      { label: 'Definir mi contraseña', url },
+    ),
+  };
+}
